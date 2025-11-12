@@ -1,13 +1,13 @@
-name: Build Windows Installer
+name: Build Windows EXE
 
 on:
   push:
-    branches: [ "main", "master" ] # Runs when you push to main
-  workflow_dispatch: # Allows you to run it manually
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest # This is key: it runs on a Windows machine
+    runs-on: windows-latest
 
     steps:
     - name: Check out code
@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # Use a stable Python version
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
@@ -30,26 +30,18 @@ jobs:
         echo "MPL_DATA=$mpl_path" >> $env:GITHUB_OUTPUT
       shell: pwsh
 
-    - name: Run PyInstaller
+    - name: Run PyInstaller (to create a single .exe)
       run: |
-        pyinstaller --noconfirm --log-level=INFO --onedir --windowed `
+        pyinstaller --noconfirm --log-level=INFO --onefile --windowed `
           --add-data "${{ steps.find_mpl.outputs.MPL_DATA }};matplotlib/mpl-data" `
           --icon=icon.ico `
           laplace.py
       shell: pwsh
-
-    - name: Install Inno Setup
-      uses: crazy-max/ghaction-setup-inno@v3
-      with:
-        version: "6.2.2"
-
-    - name: Run Inno Setup
-      run: |
-        iscc setup.iss
-      shell: pwsh
       
-    - name: Upload Installer as Artifact
+    # --- STEPS FOR INNO SETUP HAVE BEEN REMOVED ---
+
+    - name: Upload Single EXE as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Windows-Installer
-        path: Output/setup.exe # This is the final setup file
+        name: Windows-EXE
+        path: dist/laplace.exe # Upload the single .exe file
