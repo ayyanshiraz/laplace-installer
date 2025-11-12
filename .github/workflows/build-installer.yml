@@ -1,0 +1,55 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches: [ "main", "master" ] # Runs when you push to main
+  workflow_dispatch: # Allows you to run it manually
+
+jobs:
+  build:
+    runs-on: windows-latest # This is key: it runs on a Windows machine
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Use a stable Python version
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Find Matplotlib data path
+      id: find_mpl
+      run: |
+        $mpl_path = python -c "import matplotlib; print(matplotlib.get_data_path())"
+        echo "MPL_DATA=$mpl_path" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
+    - name: Run PyInstaller
+      run: |
+        pyinstaller --noconfirm --log-level=INFO --onedir --windowed `
+          --add-data "${{ steps.find_mpl.outputs.MPL_DATA }};matplotlib/mpl-data" `
+          --icon=icon.ico `
+          laplace.py
+      shell: pwsh
+
+    - name: Install Inno Setup
+      uses: crazy-max/ghaction-setup-inno@v3
+      with:
+        version: "6.2.2"
+
+    - name: Run Inno Setup
+      run: |
+        iscc setup.iss
+      shell: pwsh
+      
+    - name: Upload Installer as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-Installer
+        path: Output/setup.exe # This is the final setup file
